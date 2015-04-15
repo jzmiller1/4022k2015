@@ -1,1 +1,5 @@
-
+SRID # 97456
+used UTM-8
+I still need to creat two views to narrow down the counties to just GA
+    georgia_counties_2000
+    georgia_counties_2010
