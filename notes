@@ -3,3 +3,5 @@ used UTM-8
 I still need to creat two views to narrow down the counties to just GA
     georgia_counties_2000
     georgia_counties_2010
+    
+Used ArcMAP to narrow down the US County shapefiles to GA county shapefiles for 2000 and 2010
