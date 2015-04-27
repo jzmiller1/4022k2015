@@ -1,0 +1,3 @@
+Acquired NLCD for the years 2001, 2006 and 2011. This large data set needed to be refined to the study area,
+the state of Georgia.  Method used to clip the raster data, was to use the drawing tool to create a graphic surrounding Georgia. 
+Export the data with extent as Selected Graphics (Clipping) and format as TIFF.
