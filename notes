@@ -6,3 +6,13 @@ I used the shapefile loader to easily load the shapefiles into postgreSQL9.3
 
 We tried to find the dissolve function in PostgreSQL9.3 and were unsuccessful so we 
 used ArcMAP to dissolve the circuits and districts and then imported these 2 shapefiles into our database
+
+SELECT DropGeometryColumn ('public', 'circuitsanddistricts', 'geom');
+
+SELECT county, population_2010 FROM population_2010 AS a,
+(SELECT * FROM circuitsanddistricts WHERE district = 9) AS b
+WHERE a.gisjoin = b.gisjoin;
+
+SELECT circuit, SUM(population_2010) FROM population_2010 AS a,
+circuitsanddistricts AS b
+WHERE a.gisjoin = b.gisjoin GROUP BY circuit ORDER BY circuit ASC;
