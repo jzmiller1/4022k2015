@@ -1,0 +1,22 @@
+Before loading the raster to PSQL understand the size and analysis you will be performing. Changing the tile size from 100x100
+to a larger size like 1000x1000 will shave minutes off the processing time.  The ST_Intersect and St_Clip tools used in the 
+tabulate area SQL will run smoother.Navigate to OSGeo4W Shell, on the command line navigate to the files directory.
+– raster2pgsql use the following flags.
+-s: Assigns SRID to the raster(our raster data is NAD83 = SRID 4269)
+-t: tile size (1000x1000)
+-F: adds a column to the table with raster file name.
+-I: create GIST spatial index on the tables raster column
+-C: applies standard set of constraints
+-y: flag instructs raster2pgsql to use copy statements.
+Command line: “C:\file path\raster@pgsql.exe” –s 4269 –t 1000X1000 –F –I –C –y file 
+ filename > filename.sql
+Navigate to pgAdmin III,  create database connection. Copied sql into data base using the PSQL Console.
+\i file path/ filename.sql 
+Was able to successfully load the nlcd2006 and nlcd2011 in database but was running into issues with the nlcd2001.sql,
+process was taking a long time and eventually would not load. Moved on to running SQL command on the data.
+Goal was to tabulate the area of counties in Georgia. The SQL command I performed would run but 0 rows were affected. 
+CREATE TABLE tabulate_area AS
+SELECT a.county
+       ,SUM(ST_Count(ST_Clip(b."-i", 1, a.geom, TRUE)) * pow(90,2)) AS square_meters
+FROM  ga_counties_2000 a
+INNER JOIN  nlcd2006 b ON ST_Intersects(a.geom, b."-i") GROUP BY a.county
