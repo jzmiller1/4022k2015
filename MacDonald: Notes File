@@ -1,1 +1,125 @@
 Notes:
+
+
+*Created table for Georgia county populations in 2000:
+CREATE TABLE population_2000 (GISJOIN varchar, YEAR float, REGIONA float, DIVISIONA float, STATE varchar, STATEA varchar, COUNTY varchar, COUNTYA varchar, FL5001 float);
+
+*Used psql console to upload 2000 CSV tabular information:
+\COPY population_2000(GISJOIN, YEAR, REGIONA, DIVISIONA, STATE, STATEA, COUNTY, COUNTYA, FL5001) FROM 'P/population_2000.csv' WITH CSV HEADER;
+
+*Created Table for Georgia county populations in 2010:
+CREATE TABLE population_2010 (GISJOIN varchar, YEAR float, REGIONA float, DIVISIONA float, STATE varchar, STATEA varchar, COUNTY varchar, COUNTYA varchar, H7V001 float);
+
+*Used psql console to upload 2010 tabular data:
+\COPY population_2010(GISJOIN, YEAR, REGIONA, DIVISIONA, STATE, STATEA, COUNTY, COUNTYA, H7V001) FROM 'P/population_2010.csv' WITH CSV HEADER;
+
+*Created Table for Georgia County populations 2013:
+*For 2013, Region A and Division A are empty columns in CSV, and therefore could not add data to table.
+*Census data for 2013 is estimated population, rather than actual population. Census off-year estimates such as 2013 take samples from mostly populated areas to gauge growth. Therefore, there are only 36 counties accounted for in 2013 data rather than 159.
+CREATE TABLE population_2013 (GISJOIN varchar, YEAR float, STATE varchar, STATEA varchar, COUNTY varchar, COUNTYA varchar, SBLE001 float);
+
+*Used psql console to upload 2013 tabular data:
+\COPY population_2013(GISJOIN, YEAR, STATE, STATEA, COUNTY, COUNTYA, sble001) FROM 'P/population_2013.csv' WITH CSV HEADER;
+
+*Used Alter Table sequel statement to rename column containing population information from NHGIS code to word "population" for the sake of clarity.
+ALTER TABLE population_2000 RENAME COLUMN fl5001 TO population;
+ALTER TABLE population_2010 RENAME COLUMN h7v001 TO population;
+ALTER TABLE population_2013 RENAME COLUMN sble001 TO population;
+
+
+
+
+*Created new view with population change as float, also containing original 2000 and 2010 population data and state names:
+SELECT a.county, a.population_2000, b.population_2010, population_2010/population_2000 FROM population_2000 a, population_2010 b WHERE a.state = b.state AND a.countya = b.countya;
+CREATE VIEW population_change AS (SELECT a.county, a.population_2000, b.population_2010, population_2010/population_2000 FROM population_2000 a, population_2010 b WHERE a.state = b.state AND a.countya = b.countya);
+
+*Created new view with population information and population change information, combined with districts and circuits:
+*Resulted in over 2000 rows, due to circuits and districts overlapping several counties, and thus repeating county information. Need to figure out how to minimize data repetition.
+CREATE VIEW circuits_and_districts_population AS (SELECT population_change NATURAL JOIN circuitsanddistricts);
+
+
+Dropped the circuits_and_districts_population view and created a view for district population change and one for circuit population change to try and minimize the amount of results. The new districts_population_change view and circuits_population_change view still has over 1500 rows, however. Since circuits and districts overlap different counties, postgreSQL is defaulting to doing a cross join. Need to figure out how to sort out population just by district or just by circuit for adequate report.
+
+
+
+*Had to drop original population views and recreate them by joining county tables in order to use the 'geom' column to accurately join and compare population information with district and circuits tables.
+
+    The following sql statements I used to create a view combining population 2000 and 2010 tables with 2000 and 2010 ga county boundaries. CREATE VIEW population_2000_3 AS (SELECT a.county, a.population_2000, b.geom FROM population_2000 a, ga_counties_2000 b WHERE a.gisjoin = b.gisjoin) CREATE VIEW population_2010_3 AS (SELECT a.county, a.population_2010, b.geom FROM population_2010 a, ga_counties_2010 b WHERE a.gisjoin = b.gisjoin) *The following sql statement I used to create a view for population change based on geometry rather than county since county data caused errors when attempting to join with circuits and districts. There is still a view that I created earlier for population change based on county names in case it is needed for other portions of the project. CREATE VIEW population_change_geom AS (SELECT a.geom, a.population_2000, b.population_2010, population_2010/population_2000 FROM population_2000_3 a, population_2010_3 b WHERE a.geom = b.geom)
+
+*Using the following sql statement I can population change for circuits that have equal geometries as counties (i.e circuits that only have 1 county). There are 11 results, but there are 49 total. I have been attempting to write sql statements using natural joins, as well as attempted to us the ST_Union and ST_Intersection functions to try and merge the county geometries with their corresponding circuits and districts but keep getting errors.
+SELECT * FROM population_change_geom NATURAL JOIN circuits
+
+
+
+
+*Still could not merge or intersect polygons together using ST_Union or ST_Intersection functions. Using the following sql statements below, I can get the populations and population changes of the 11 circuits that contain 1 county, and the 1 district that contains 1 county, but still cannot get the information for all districts and circuits.
+
+CREATE VIEW population_change_districts AS (SELECT * FROM population_change_geom NATURAL JOIN districts)
+CREATE VIEW population_change_circuits AS (SELECT * FROM population_change_geom NATURAL JOIN circuits)
+
+Cannot determine population distribution of districts. However, based on the 11 circuits, I can state that they do not equal population distributions, and therefore thee circuit outlines are not determined strictly by population.
+
+
+
+
+SELECT county, ST_Centroid(geom), population_2010 FROM population_2010_3;
+
+SELECT SUM(population_2010) FROM (SELECT county, population_2010 FROM population_2010_3 WHERE ST_Within(ST_Centroid(geom), (SELECT geom FROM circuits WHERE
+circuit = 'Alapaha'))) AS foo;
+
+SELECT SUM(population_2010) FROM
+(SELECT county, population_2010 FROM population_2010_3
+WHERE ST_Within(ST_Centroid(geom), (SELECT geom FROM circuits WHERE
+circuit = 'Alapaha'))) AS foo;
+
+SELECT circuit, SUM(population_2010) FROM circuitsanddistricts as c, population_2010 as p
+WHERE c.gisjoin=p.gisjoin
+GROUP BY circuit;
+
+SELECT circuit, SUM(population_2000) FROM circuitsanddistricts as c, population_2000 as p
+WHERE c.namelsad10=p.county || ' County'::varchar
+GROUP BY circuit
+ORDER BY circuit;
+
+SELECT SUM(population_2000) FROM
+(SELECT county, population_2000 FROM population_2000_3
+WHERE ST_Within(ST_Centroid(geom), (SELECT geom FROM circuits WHERE
+circuit = 'Atlantic'))) AS foo;
+
+SELECT SUM(sum) FROM (SELECT circuit, SUM(population_2000) FROM circuitsanddistricts as c, population_2000 as p
+WHERE c.namelsad10=p.county || ' County'::varchar
+GROUP BY circuit
+ORDER BY circuit) AS circuitpop;
+
+CREATE VIEW population__circuits_2000 AS (SELECT circuit, SUM(population_2000) FROM circuitsanddistricts as c, population_2000 as p
+WHERE c.namelsad10=p.county || ' County'::varchar
+GROUP BY circuit
+ORDER BY circuit);
+
+CREATE VIEW population_districts_2000 AS (SELECT district, SUM(population_2000) FROM circuitsanddistricts as c, population_2000 as p
+WHERE c.namelsad10=p.county || ' County'::varchar
+GROUP BY district
+ORDER BY district);
+
+CREATE VIEW population_circuits_2010 AS (SELECT circuit, SUM(population_2010) FROM circuitsanddistricts as c, population_2010 as p
+WHERE c.namelsad10=p.county || ' County'::varchar
+GROUP BY circuit
+ORDER BY circuit);
+
+CREATE VIEW population_circuits_2010 AS (SELECT circuit, SUM(population_2010) FROM circuitsanddistricts as c, population_2010 as p
+WHERE c.gisjoin=p.gisjoin
+GROUP BY circuit);
+
+CREATE VIEW population_districts_2010 AS (SELECT district, SUM(population_2010) FROM circuitsanddistricts as c, population_2010 as p
+WHERE c.gisjoin=p.gisjoin
+GROUP BY district);
+
+(SELECT a.circuit, a.sum, b.sum, b.sum/a.sum FROM population_circuits_2000 a, population_circuits_2010 b WHERE a.circuit = b.circuit);
+
+
+Created new population change information for counties, districts, and circuits based on percentages
+CREATE VIEW population_change_percent AS (SELECT a.county, a.population_2000, b.population_2010, (((population_2010/population_2000)100)-100) FROM population_2000 a, population_2010 b WHERE a.state = b.state AND a.countya = b.countya);
+CREATE VIEW population_change_districts_percent AS (SELECT a.district, (((b.sum/a.sum)100)-100) FROM population_districts_2000 a, population_districts_2010 b WHERE a.district = b.district);
+CREATE VIEW population_change_circuits_percent AS (SELECT a.circuit, (((b.sum/a.sum)100)-100) FROM population_circuits_2000 a, population_circuits_2010 b WHERE a.circuit = b.circuit);
+
+* After analyzing the populations of the circuits and the districts, it can safely be analyzed that districts do not have equal populations, nor do circuits have equal populations, therefore population distribution is not the sole determinant of district or circuit boundaries.
