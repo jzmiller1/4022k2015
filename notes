@@ -1,10 +1,8 @@
 SRID # 97456
 used UTM-8
-I still need to creat two views to narrow down the counties to just GA
-    georgia_counties_2000
-    georgia_counties_2010
-    
+
 Used ArcMAP to narrow down the US County shapefiles to GA county shapefiles for 2000 and 2010
-Today I added all of the districts and circuits to my map and then accidentally deleted them all!!
-Circuits and districts are back and the shapefile is loaded to the database.
-Used ArcMAP to dissolve the circuits and districts and then imported these 2 shapefiles
+I used the shapefile loader to easily load the shapefiles into postgreSQL9.3
+
+We tried to find the dissolve function in PostgreSQL9.3 and were unsuccessful so we 
+used ArcMAP to dissolve the circuits and districts and then imported these 2 shapefiles into our database
