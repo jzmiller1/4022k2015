@@ -61,7 +61,7 @@ Cannot determine population distribution of districts. However, based on the 11 
 
 
 
-
+*Used to try and view centroids for counties to try and merge counties into circuit polygons and district polygons. Did not use.
 SELECT county, ST_Centroid(geom), population_2010 FROM population_2010_3;
 
 SELECT SUM(population_2010) FROM (SELECT county, population_2010 FROM population_2010_3 WHERE ST_Within(ST_Centroid(geom), (SELECT geom FROM circuits WHERE
@@ -81,35 +81,36 @@ WHERE c.namelsad10=p.county || ' County'::varchar
 GROUP BY circuit
 ORDER BY circuit;
 
+* Used to check population by specific circuit for 2000
 SELECT SUM(population_2000) FROM
 (SELECT county, population_2000 FROM population_2000_3
 WHERE ST_Within(ST_Centroid(geom), (SELECT geom FROM circuits WHERE
 circuit = 'Atlantic'))) AS foo;
 
+*Used to check populations for circuits and districts for year 2000
 SELECT SUM(sum) FROM (SELECT circuit, SUM(population_2000) FROM circuitsanddistricts as c, population_2000 as p
 WHERE c.namelsad10=p.county || ' County'::varchar
 GROUP BY circuit
 ORDER BY circuit) AS circuitpop;
 
+*Created view for 2000 population for circuits
 CREATE VIEW population__circuits_2000 AS (SELECT circuit, SUM(population_2000) FROM circuitsanddistricts as c, population_2000 as p
 WHERE c.namelsad10=p.county || ' County'::varchar
 GROUP BY circuit
 ORDER BY circuit);
 
+*Created 2000 population view for districts
 CREATE VIEW population_districts_2000 AS (SELECT district, SUM(population_2000) FROM circuitsanddistricts as c, population_2000 as p
 WHERE c.namelsad10=p.county || ' County'::varchar
 GROUP BY district
 ORDER BY district);
 
-CREATE VIEW population_circuits_2010 AS (SELECT circuit, SUM(population_2010) FROM circuitsanddistricts as c, population_2010 as p
-WHERE c.namelsad10=p.county || ' County'::varchar
-GROUP BY circuit
-ORDER BY circuit);
-
+*Created 2010 population view for circuits
 CREATE VIEW population_circuits_2010 AS (SELECT circuit, SUM(population_2010) FROM circuitsanddistricts as c, population_2010 as p
 WHERE c.gisjoin=p.gisjoin
 GROUP BY circuit);
 
+* Created view for 2010 population for districts
 CREATE VIEW population_districts_2010 AS (SELECT district, SUM(population_2010) FROM circuitsanddistricts as c, population_2010 as p
 WHERE c.gisjoin=p.gisjoin
 GROUP BY district);
