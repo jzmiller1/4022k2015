@@ -1,0 +1,8 @@
+SRID # 97456
+used UTM-8
+
+Used ArcMAP to narrow down the US County shapefiles to GA county shapefiles for 2000 and 2010
+I used the shapefile loader to easily load the shapefiles into postgreSQL9.3
+
+We tried to find the dissolve function in PostgreSQL9.3 and were unsuccessful so we 
+used ArcMAP to dissolve the circuits and districts and then imported these 2 shapefiles into our database
